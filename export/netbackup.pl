@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# version 2.8.3
+# version 3.0.0
 #
 
 use strict;
@@ -22,7 +22,7 @@ else {
 my %Procs;
 tie %Procs, "Tie::IxHash";
 %Procs =  (
-  "set_date_update" => \&set_date_update,
+  "init_data" => \&init_data,
   "retention" => \&retention,
   "host" => \&host,
   "robot_drive" => \&robot_drive,
@@ -53,17 +53,14 @@ use vars qw($dbh $sth $sql);
 $dbh = DBI->connect('dbi:Oracle:', 'netbackup@COD', 'NB', {RaiseError => 1, PrintError =>1, AutoCommit => 0})
          || die $dbh->errstr;
 
-proc_one("set_date_update");
-
-#print "\nProcedure:set_date_update\n";
-#set_date_update();
+proc_one("init_data");
 
 if ($dbg) {
   proc_one($Rj);
 }
 else {
   foreach my $Ind (keys %Procs) {
-	next if $Ind eq "set_date_update";
+	next if $Ind eq "init_data";
 	proc_one($Ind);
   }
 }
@@ -153,6 +150,60 @@ sub proc_one
   $Procs{$Proc}->();
 }
 
+#-------------
+sub init_data
+{
+  set_date_update();	
+  set_master();	
+}
+
+#-------------
+sub set_master
+{ my ($MasterName, $sIP);
+
+  $MasterName = calc_master_name();
+  ($MasterName, $sIP) = get_hostname_ip($MasterName);
+#  print "MasterName:$MasterName\n";
+  save_master($MasterName, $sIP);
+}
+
+#-------------
+sub calc_master_name
+{ my $sMaster;
+  my $sBpConfFile = "/usr/openv/netbackup/bp.conf";
+  my ($sLine, @Flds);
+  
+  open (BC, "$sBpConfFile") || die "Cannot open $sBpConfFile !";
+  $sLine = <BC>;
+  close(BC);
+  chomp($sLine);  
+    
+  @Flds = split(/\s*=\s*/, $sLine);
+  $sMaster = $Flds[1];
+  return $sMaster;
+}	
+
+#-------------
+sub save_master
+{
+  my $RC;
+
+  $sth = $dbh->prepare(
+                 "BEGIN  :rc :=
+                    NetBackup.SetCurrentMaster
+                         (pMasterName => :pmastername,
+			              pMasterIP => :pmasterip);
+                  END;") || die $dbh->errstr;
+  
+  $sth->bind_param(':pmastername', $_[0]) || die $dbh->errstr;    
+  $sth->bind_param(':pmasterip', $_[1]) || die $dbh->errstr;    
+  $sth->bind_param_inout(':rc', \$RC, 24, SQL_NUMERIC) || die $dbh->errstr;
+   
+  $sth->execute() || die $dbh->errstr;
+  
+  print "MasterID:$RC\n";	
+}
+	
 #-------------
 sub set_date_update
 {
@@ -1993,10 +2044,10 @@ sub get_job_state
   $sth = $dbh->prepare(
                  "BEGIN :rc :=
                     NetBackup.GetJobState(
-                      pJobID => :pjobid);
+                      pOuterID => :pouterid);
                   END;") || die $dbh->errstr;
   
-  $sth->bind_param(':pjobid', $_[0]) || die $dbh->errstr;    
+  $sth->bind_param(':pouterid', $_[0]) || die $dbh->errstr;    
   $sth->bind_param_inout(':rc', \$RC, 64, SQL_VARCHAR) || die $dbh->errstr;
    
   $sth->execute() || die $dbh->errstr;
@@ -2010,13 +2061,13 @@ sub save_job_detail
   $sth = $dbh->prepare(
                  "BEGIN 
                     NetBackup.SetJobDetail(
-                      pJobID => :pjobid,
+                      pOuterID => :pouterid,
                       pTry => :ptry,
                       pNLine => :pnline,
                       pLineStr => :plinestr);
                   END;") || die $dbh->errstr;
   
-  $sth->bind_param(':pjobid', $_[0]) || die $dbh->errstr;    
+  $sth->bind_param(':pouterid', $_[0]) || die $dbh->errstr;    
   $sth->bind_param(':ptry', $_[1]) || die $dbh->errstr;    
   $sth->bind_param(':pnline', $_[2]) || die $dbh->errstr;    
   $sth->bind_param(':plinestr', $_[3]) || die $dbh->errstr;
@@ -2032,10 +2083,10 @@ sub del_job_detail
   $sth = $dbh->prepare(
                  "BEGIN 
                     NetBackup.DelJobDetail(
-                      pJobID => :pjobid);
+                      pOuterID => :pouterid);
                   END;") || die $dbh->errstr;
   
-  $sth->bind_param(':pjobid', $_[0]) || die $dbh->errstr;    
+  $sth->bind_param(':pouterid', $_[0]) || die $dbh->errstr;    
    
   $sth->execute() || die $dbh->errstr;
 }

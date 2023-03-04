@@ -543,7 +543,6 @@ create or replace package body netbackup.NetBackup is
        set secs = pSecs,
            period = pPeriod,
            date_update = GetDateUpdate,
-		   master_id = gCurrentMasterID,
            kvo = pKvo
      where ind = pInd;
       
@@ -553,9 +552,9 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into retention
-      (ind, secs, period, kvo, date_insert, date_update, master_id)
+      (ind, secs, period, kvo, date_insert, date_update)
     values
-      (pInd, pSecs, pPeriod, pKvo, GetDateUpdate, GetDateUpdate, gCurrentMasterID);
+      (pInd, pSecs, pPeriod, pKvo, GetDateUpdate, GetDateUpdate);
 
     commit;
 
@@ -578,7 +577,6 @@ create or replace package body netbackup.NetBackup is
            robot_type = pRobotType,
            robotic_path = pRobotPath,
             date_update = GetDateUpdate,
-			master_id = gCurrentMasterID,
           host_id = HostID
      where robot_number = pRobotNumber;
  
@@ -588,9 +586,9 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into robot
-      (robot_number, robot_name, robot_type, robotic_path, host_id, date_insert, date_update, master_id)
+      (robot_number, robot_name, robot_type, robotic_path, host_id, date_insert, date_update)
     values
-      (pRobotNumber, pRobotName, pRobotType, pRobotPath, HostID, GetDateUpdate, GetDateUpdate, gCurrentMasterID);
+      (pRobotNumber, pRobotName, pRobotType, pRobotPath, HostID, GetDateUpdate, GetDateUpdate);
  
     commit;
     
@@ -737,8 +735,7 @@ create or replace package body netbackup.NetBackup is
     update volumepool
        set 
            date_update = GetDateUpdate,
-           description = pDescr,
-		   master_id = gCurrentMasterID
+           description = pDescr
      where name = pName
     returning volumepool_id into VolumePoolID;
 
@@ -748,9 +745,9 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into volumepool
-      (description, name, date_insert, date_update, master_id)
+      (description, name, date_insert, date_update)
     values
-      (pDescr, pName, GetDateUpdate, GetDateUpdate, gCurrentMasterID)
+      (pDescr, pName, GetDateUpdate, GetDateUpdate)
     returning volumepool_id into VolumePoolID;
 
     commit;
@@ -803,8 +800,7 @@ create or replace package body netbackup.NetBackup is
     update volumegroup
        set media_type = nvl(pMediaType, media_type),
            date_update = GetDateUpdate,
-           robot_number = nvl(pRobotNumber, robot_number),
-		   master_id = gCurrentMasterID
+           robot_number = nvl(pRobotNumber, robot_number)
      where name = pName
     returning volumegroup_id into VolumeGroupID;
 
@@ -814,9 +810,9 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into volumegroup
-      (name, media_type, robot_number, date_insert, date_update, master_id)
+      (name, media_type, robot_number, date_insert, date_update)
     values
-      (pName, pMediaType, pRobotNumber, GetDateUpdate, GetDateUpdate, gCurrentMasterID)
+      (pName, pMediaType, pRobotNumber, GetDateUpdate, GetDateUpdate)
     returning volumegroup_id into VolumeGroupID;
     commit;
     return VolumeGroupID;
@@ -930,7 +926,6 @@ create or replace package body netbackup.NetBackup is
            retention = pRetention,
            media_server_id = MediaServerID,
            date_update = GetDateUpdate,
-		   master_id = gCurrentMasterID,
            restores = pRestores
      where media_id = pMediaID;
 
@@ -943,12 +938,12 @@ create or replace package body netbackup.NetBackup is
       (media_id, media_status,
        last_written, last_read, date_expiration, kilobytes, 
        images, valid_images, retention, media_server_id,
-       restores, date_insert, date_update, master_id)
+       restores, date_insert, date_update)
     values
       (pMediaID, pMediaStatus,
        pLastWritten, pLastRead, pDateExpiration, pKilobytes, 
        pImages, pValidImages, pRetention, MediaServerID,
-       pRestores, GetDateUpdate, GetDateUpdate, gCurrentMasterID);
+       pRestores, GetDateUpdate, GetDateUpdate);
     commit;
   end  SetMedia1;           
 
@@ -1054,7 +1049,6 @@ create or replace package body netbackup.NetBackup is
            slp_dup_priority = nvl(pSLPDupPriority, slp_dup_priority),
            slp_version = nvl(pSLPVersion, slp_version),
            date_update = GetDateUpdate,
-		   master_id = gCurrentMasterID,
            slp_state = nvl(pSLPState, slp_state)
        where name = pSUName
     returning storageunit_id into StorageUnitID;
@@ -1068,12 +1062,12 @@ create or replace package body netbackup.NetBackup is
       (name, robot_number, density, fragment_size, max_drives, multiplexing, 
        is_group, media_server_id, type, subtype, path, conc_jobs,
        high_wmark, low_wmark, disk_pool, 
-       is_slp, slp_dup_priority, slp_version, slp_state, date_insert, date_update, master_id)
+       is_slp, slp_dup_priority, slp_version, slp_state, date_insert, date_update)
     values
       (pSUName, pRobot, pDensity, pFragSize, pMaxDrives, pMultiplex, 
        pISGroup, MediaServerNameID, pType, pSubType, pPath, pConcJobs,
        pHighWMark, pLowWMark, pDiskPool, 
-       pIsSLP, pSLPDupPriority, pSLPVersion, pSLPState, GetDateUpdate, GetDateUpdate, gCurrentMasterID)
+       pIsSLP, pSLPDupPriority, pSLPVersion, pSLPState, GetDateUpdate, GetDateUpdate)
     returning storageunit_id into StorageUnitID;
 
     commit;
