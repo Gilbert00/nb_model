@@ -352,7 +352,7 @@ end NetBackup;
 /
 create or replace package body netbackup.NetBackup is
 
-  -- Version : 20200516
+  -- Version : 20230310
 
   -- Private type declarations
 --  type <TypeName> is <Datatype>;
@@ -478,22 +478,42 @@ create or replace package body netbackup.NetBackup is
   end  SetHost;           
 
 --------
-  function GetRobotNumber
+  function GetRobotID
             (pRobotName varchar2)
             return number
   is
-    RobotNumber integer;
+    RobotID integer;
   begin
-    SELECT robot_number
-      INTO RobotNumber
+    SELECT robot_id
+      INTO RobotID
       FROM robot
-     WHERE robot_name = pRobotName;
+     WHERE robot_name = pRobotName
+       AND master_id = gCurrentMasterID;
      
-    return RobotNumber; 
+    return RobotID; 
   exception
   when NO_DATA_FOUND then   
     return null;
-  end GetRobotNumber;            
+  end GetRobotID;            
+
+--------
+  function GetRobotID1
+            (pRobotNumber number)
+            return number
+  is
+    RobotID integer;
+  begin
+    SELECT robot_id
+      INTO RobotID
+      FROM robot
+     WHERE robot_number = pRobotNumber
+       AND master_id = gCurrentMasterID;
+     
+    return RobotID; 
+  exception
+  when NO_DATA_FOUND then   
+    return null;
+  end GetRobotID1;            
 
 --------
   function GetVolumePoolID
@@ -607,27 +627,27 @@ create or replace package body netbackup.NetBackup is
               pDrivePath varchar2 := null)
             return number
   is
-    RobotNumber integer;
+    RobotID integer;
     HostID integer;
     DriveID integer;
   begin
     if pRobotName is not null then
-      RobotNumber := GetRobotNumber(pRobotName);
+      RobotID := GetRobotID(pRobotName);
     end if;
 
     update drive
        set type = pType,
            serial_number = nvl(pSerial, serial_number),
            date_update = GetDateUpdate,
-           robot_number = nvl(RobotNumber, robot_number)
+           robot_id = nvl(RobotID, robot_id)
      where name = pName
     returning drive_id into DriveID;
       
     if SQL%NOTFOUND then
       insert into drive
-        (name, type, serial_number, robot_number, date_insert, date_update)
+        (name, type, serial_number, robot_id, date_insert, date_update)
       values
-        (pName, pType, pSerial, RobotNumber, GetDateUpdate, GetDateUpdate)
+        (pName, pType, pSerial, RobotID, GetDateUpdate, GetDateUpdate)
       returning drive_id into DriveID;
     end if;
      
@@ -799,11 +819,14 @@ create or replace package body netbackup.NetBackup is
              return number
   is
     VolumeGroupID number;
+    RobotID number;
   begin 
+    RobotID := GetRobotID1(pRobotNumber);  
+  
     update volumegroup
        set media_type = nvl(pMediaType, media_type),
            date_update = GetDateUpdate,
-           robot_number = nvl(pRobotNumber, robot_number),
+           robot_id = nvl(RobotID, robot_id),
 		   master_id = gCurrentMasterID
      where name = pName
     returning volumegroup_id into VolumeGroupID;
@@ -814,7 +837,7 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into volumegroup
-      (name, media_type, robot_number, date_insert, date_update, master_id)
+      (name, media_type, robot_id, date_insert, date_update, master_id)
     values
       (pName, pMediaType, pRobotNumber, GetDateUpdate, GetDateUpdate, gCurrentMasterID)
     returning volumegroup_id into VolumeGroupID;
@@ -1030,13 +1053,16 @@ create or replace package body netbackup.NetBackup is
   is
     MediaServerNameID number;
     StorageUnitID number;
+    RobotID number;
   begin 
     if pMediaServerName is not null then
       MediaServerNameID := GetHostID(pMediaServerName);
     end if;
+    
+    RobotID := GetRobotID1(pRobot);
       
     update storageunit
-       set robot_number = nvl(pRobot, robot_number),
+       set robot_id = nvl(RobotID, robot_id),
            density = nvl(pDensity, density),
            fragment_size = nvl(pFragSize, fragment_size),
            max_drives = nvl(pMaxDrives, max_drives),
@@ -1065,12 +1091,12 @@ create or replace package body netbackup.NetBackup is
     end if;
 
     insert into storageunit
-      (name, robot_number, density, fragment_size, max_drives, multiplexing, 
+      (name, robot_id, density, fragment_size, max_drives, multiplexing, 
        is_group, media_server_id, type, subtype, path, conc_jobs,
        high_wmark, low_wmark, disk_pool, 
        is_slp, slp_dup_priority, slp_version, slp_state, date_insert, date_update, master_id)
     values
-      (pSUName, pRobot, pDensity, pFragSize, pMaxDrives, pMultiplex, 
+      (pSUName, RobotID, pDensity, pFragSize, pMaxDrives, pMultiplex, 
        pISGroup, MediaServerNameID, pType, pSubType, pPath, pConcJobs,
        pHighWMark, pLowWMark, pDiskPool, 
        pIsSLP, pSLPDupPriority, pSLPVersion, pSLPState, GetDateUpdate, GetDateUpdate, gCurrentMasterID)
